@@ -1,6 +1,6 @@
 # Prompt Injection Detection
 
-> **Origin:** This project extends the research started in [Guardrailer](https://github.com/dev-prashanna/Guardrailer), which explored the 7-phase empirical journey of nearest-centroid scoring failure on embedding representations.
+> **Origin:** This project extends the research started in [Guardrailer](https://github.com/dev-prashanna/Guardrailer), tracing the empirical journey from embedding-based scoring to lightweight statistical models for prompt injection detection.
 
 A research project investigating prompt injection detection using embedding-based scoring and lightweight statistical features. Published as a LaTeX paper with full experimental code.
 
