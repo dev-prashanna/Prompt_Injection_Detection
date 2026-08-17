@@ -15,6 +15,15 @@ This project systematically investigates why nearest-centroid scoring fails on e
 - **TF-IDF alone outperforms full hybrid** — ablation study shows handcrafted features add noise
 - **Severe generalization gap** — 83.0% in-distribution → 51.4% on external benchmarks
 
+### Why 4-Centroid Accuracy (68.3%) and AUC (0.558) Differ
+
+The 4-centroid nearest-centroid model on 10K samples shows similar accuracy to the 2-centroid model (68.3% vs 71.8%) but vastly different AUC (0.558 vs 0.772). This is because accuracy and AUC use different scoring signals:
+
+- **Accuracy** uses the argmax boundary — each sample is assigned to the nearest of ALL 4 centroids. This leverages the full geometry of all 4 centroids. Even with overlap ($C = 0.909$), the argmax picks the right category often enough to achieve 68.3%.
+- **AUC** uses a continuous score — the max similarity to any of the 3 malicious centroids. This **discards the benign centroid information entirely**. With high centroid overlap, benign and malicious samples both have high similarity to malicious centroids, producing near-random ranking (AUC 0.558).
+
+In short: accuracy benefits from the full 4-centroid geometry, while AUC is computed on an incomplete signal (3 of 4 centroids). The 722K result (AUC 0.547) is the more reliable estimate, as 10K-sample centroids are noisy and artificially reduce measured overlap.
+
 ## Repository Structure
 
 ```
