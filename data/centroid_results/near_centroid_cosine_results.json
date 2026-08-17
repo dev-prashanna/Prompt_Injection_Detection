@@ -1,0 +1,42 @@
+{
+  "BAAI/bge-large-en-v1.5": {
+    "method": "near_centroid_cosine",
+    "params": "335M",
+    "accuracy": 0.718,
+    "f1_score": 0.7201056290710054,
+    "precision": 0.7256420202020202,
+    "recall": 0.718,
+    "auc_roc": 0.7715581663537316,
+    "centroid_cosine_similarity": 0.9856006503105164
+  },
+  "sentence-transformers/all-MiniLM-L6-v2": {
+    "method": "near_centroid_cosine",
+    "params": "22M",
+    "accuracy": 0.6945,
+    "f1_score": 0.6968841103368589,
+    "precision": 0.7030698279418693,
+    "recall": 0.6945,
+    "auc_roc": 0.752795598649453,
+    "centroid_cosine_similarity": 0.877934455871582
+  },
+  "intfloat/e5-small-v2": {
+    "method": "near_centroid_cosine",
+    "params": "33M",
+    "accuracy": 0.708,
+    "f1_score": 0.7103186719822233,
+    "precision": 0.7167410424437948,
+    "recall": 0.708,
+    "auc_roc": 0.769174205554561,
+    "centroid_cosine_similarity": 0.9956721067428589
+  },
+  "BAAI/bge-small-en-v1.5": {
+    "method": "near_centroid_cosine",
+    "params": "33M",
+    "accuracy": 0.7,
+    "f1_score": 0.702715488443183,
+    "precision": 0.7120493777599357,
+    "recall": 0.7,
+    "auc_roc": 0.7572528403532072,
+    "centroid_cosine_similarity": 0.9871857762336731
+  }
+}

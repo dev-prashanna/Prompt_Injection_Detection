@@ -1,0 +1,42 @@
+{
+  "BAAI/bge-large-en-v1.5": {
+    "method": "near_centroid",
+    "params": "335M",
+    "accuracy": 0.712,
+    "f1_score": 0.7143616071109732,
+    "precision": 0.7213216616445641,
+    "recall": 0.712,
+    "auc_roc": 0.783751181312162,
+    "centroid_dot_product": 0.4679131805896759
+  },
+  "sentence-transformers/all-MiniLM-L6-v2": {
+    "method": "near_centroid",
+    "params": "22M",
+    "accuracy": 0.6995,
+    "f1_score": 0.701845090527745,
+    "precision": 0.7080205769702154,
+    "recall": 0.6995,
+    "auc_roc": 0.7552118243622996,
+    "centroid_dot_product": 0.08907522261142731
+  },
+  "intfloat/e5-small-v2": {
+    "method": "near_centroid",
+    "params": "33M",
+    "accuracy": 0.716,
+    "f1_score": 0.7179394554163785,
+    "precision": 0.7225152148551428,
+    "recall": 0.716,
+    "auc_roc": 0.7752483357549367,
+    "centroid_dot_product": 0.7905926704406738
+  },
+  "BAAI/bge-small-en-v1.5": {
+    "method": "near_centroid",
+    "params": "33M",
+    "accuracy": 0.7075,
+    "f1_score": 0.710023440371073,
+    "precision": 0.7180377179992179,
+    "recall": 0.7075,
+    "auc_roc": 0.7695952106378461,
+    "centroid_dot_product": 0.5100562572479248
+  }
+}
