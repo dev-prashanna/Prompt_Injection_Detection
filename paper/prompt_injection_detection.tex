@@ -20,7 +20,10 @@
 \usepackage{natbib}
 \usepackage{microtype}
 
-\geometry{margin=1in}
+\geometry{margin=0.9in}
+\setlength{\parskip}{0.5ex}
+\setlength{\parindent}{0pt}
+\renewcommand{\baselinestretch}{0.97}
 
 \hypersetup{
     colorlinks=true,
@@ -55,7 +58,7 @@
 \maketitle
 
 \begin{abstract}
-Prompt injection attacks against large language models demand robust real-time defenses. This paper investigates three questions: (1)~whether embedding representations contain discriminative information for prompt injection detection, (2)~why nearest-centroid classification fails on these embeddings, and (3)~whether lightweight statistical features offer a viable alternative. Through controlled experiments across four embedding models on 144,569 test samples, we find that the embedding space contains discriminative information (linear probes achieve AUC 0.844--0.884) that nearest-centroid scoring cannot access (AUC 0.547). The critical factor is the number of centroids: 4 category centroids overlap ($C = 0.986$) while 2 class centroids achieve AUC 0.763--0.784. We then develop a lightweight hybrid guardrail combining 117 handcrafted features, TF-IDF similarity, and a stacking ensemble. The hybrid model achieves 83.0\% in-distribution accuracy with a measured single-threaded CPU inference latency of 0.149\,ms per prompt. An ablation study reveals that TF-IDF alone (85.0\% accuracy) outperforms the full hybrid, indicating that, under the evaluated setting, the 117 handcrafted features do not provide complementary predictive value beyond TF-IDF. Cross-dataset evaluation on four external benchmarks reveals a severe generalization gap: performance drops from 83.0\% to 51.4\% (a 31.6 percentage-point decline). We present a detailed analysis of the model's strengths, weaknesses, and failure modes, providing experimentally grounded guidance for designing prompt injection detection systems.
+Prompt injection attacks against large language models demand robust real-time defenses. This paper investigates three questions: (1)~whether embedding representations contain discriminative information for prompt injection detection, (2)~why nearest-centroid classification fails on these embeddings, and (3)~whether lightweight statistical features offer a viable alternative. Through controlled experiments across embedding models on 144,569 test samples, we find that the embedding space contains discriminative information (linear probes achieve AUC 0.844--0.855) that nearest-centroid scoring cannot access (AUC 0.547). The critical factor is the number of centroids: 4 category centroids overlap ($C = 0.986$) while 2 class centroids achieve AUC 0.763--0.784. We then evaluate a lightweight hybrid guardrail combining 117 handcrafted features, TF-IDF similarity, and a stacking ensemble. The hybrid model achieves 83.0\% in-distribution accuracy with a measured single-threaded CPU inference latency of 0.149\,ms per prompt. An ablation study reveals that TF-IDF alone (85.0\% accuracy) outperforms the full hybrid, indicating that, under the evaluated setting, the 117 handcrafted features do not provide complementary predictive value beyond TF-IDF. Cross-dataset evaluation on four external benchmarks reveals a severe generalization gap: performance drops from 83.0\% to 51.5\% (a 31.5 percentage-point decline). We present a detailed analysis of the model's strengths, weaknesses, and failure modes, providing experimentally grounded guidance for designing prompt injection detection systems.
 \end{abstract}
 
 \noindent\textbf{Keywords:} prompt injection, LLM security, nearest-centroid, linear probe, hybrid guardrail, lightweight classifier, cross-dataset generalization
@@ -79,49 +82,27 @@ An intuitive defense is to use embedding models to compare inputs against known 
 
     \item \textbf{RQ3: Can lightweight statistical features provide a computationally efficient alternative?}
     
-    A hybrid guardrail combining 117 handcrafted features, TF-IDF similarity, and a stacking ensemble achieves 83.0\% in-distribution accuracy with a measured single-threaded CPU inference latency of 0.149\,ms per prompt. However, an ablation study reveals that TF-IDF alone achieves 85.0\% accuracy, exceeding the full hybrid, suggesting that handcrafted security features do not complement distributional representations under the evaluated setting. Cross-dataset evaluation on four external benchmarks reveals a severe generalization gap: performance drops to 51.4\% (a 31.6 percentage-point decline), suggesting that strong in-distribution results do not necessarily indicate robustness.
+    A hybrid guardrail combining 117 handcrafted features, TF-IDF similarity, and a stacking ensemble achieves 83.0\% in-distribution accuracy with a measured single-threaded CPU inference latency of 0.149\,ms per prompt. However, an ablation study reveals that TF-IDF alone achieves 85.0\% accuracy, exceeding the full hybrid, suggesting that handcrafted security features do not complement distributional representations under the evaluated setting. Cross-dataset evaluation on four external benchmarks reveals a severe generalization gap: performance drops to 51.5\% (a 31.5 percentage-point decline), suggesting that strong in-distribution results do not necessarily indicate robustness.
 \end{enumerate}
 
 Our contribution is threefold:
 \begin{enumerate}[leftmargin=*]
     \item We systematically investigate why nearest-centroid scoring fails on the evaluated embedding representations, showing that the 4-centroid max-similarity configuration performs poorly despite the presence of discriminative information accessible to learned classifiers.
     \item We demonstrate that linear probes and 2-centroid classifiers recover discriminative structure from the same embeddings, indicating the embedding space contains security-relevant information.
-    \item We present a lightweight hybrid guardrail with detailed strength/weakness analysis, including an ablation study showing TF-IDF alone outperforms the full hybrid, and a severe cross-dataset generalization gap (31.6 percentage-point decline).
+    \item We present a lightweight hybrid guardrail with detailed strength/weakness analysis, including an ablation study showing TF-IDF alone outperforms the full hybrid, and a severe cross-dataset generalization gap (31.5 percentage-point decline).
 \end{enumerate}
 
 %===========================================================================
 \section{Related Work}\label{sec:related}
 %===========================================================================
 
-\subsection{Prompt Injection Attacks}
-
-Prompt injection attacks exploit the shared processing context of user input and system instructions in autoregressive language models. \citet{schulhoff2023hackaprompt} first systematically characterized these attacks through the HackAPrompt competition. \citet{greshake2023not} extended this analysis to indirect injection, where malicious instructions are embedded in retrieved documents. Subsequent work has categorized attacks into multiple types: direct injection~\citep{liu2023prompt}, indirect injection~\citep{greshake2023not}, system prompt extraction~\citep{liu2023prompt}, jailbreak~\citep{perez2023jailbreak, wei2023jailbroken}, and refusal bypass~\citep{li2024chatgpt}.
-
-\subsection{LLM Security Defenses}
-
-Defense approaches span multiple paradigms. Instruction hierarchy methods~\citep{wallace2024instruction} assign privilege levels to different instruction sources. Perplexity-based detection~\citep{alon2023detecting} flags inputs with unusual statistical properties. Retrieval-augmented defense systems compare inputs against known attack corpora using embedding similarity~\citep{reimers2019sentence}.
-
-\subsection{Embedding Models for Security}
-
-General-purpose embedding models such as BAAI/bge-large-en-v1.5~\citep{xiao2023bge} are widely used for semantic search and similarity tasks. \citet{reimers2019sentence} introduced sentence-transformers, establishing the foundation for dense retrieval systems. In this work, we specifically evaluate the use of these general-purpose embedding models for prompt-injection classification under centroid-based scoring.
-
-\subsection{Representation Learning and Collapse}
-
-Representation learning has been studied extensively in the context of contrastive learning. \citet{khosla2020supervised} demonstrated supervised contrastive learning objectives. \citet{jing2022dimensional} identified dimensional collapse as a failure mode where representations collapse to a lower-dimensional subspace. Our work examines a related phenomenon in the security domain: substantial overlap between class centroids in embedding space ($C = 0.986$), which is associated with poor nearest-centroid classification performance, even though trained linear probes can extract discriminative structure.
-
-\subsection{Lightweight Security Models}
-
-The tension between model size and security effectiveness has been explored in several contexts. \citet{alon2023detecting} demonstrated that simple perplexity filters can catch basic attacks. Our hybrid classifier extends this line of work, combining TF-IDF features~\citep{manning1999foundations} with 117 handcrafted security features in a stacking ensemble framework.
+Prompt injection attacks exploit the shared context of user input and system instructions in autoregressive language models~\citep{schulhoff2023hackaprompt, greshake2023not, liu2023prompt}. Attack types include direct injection, indirect injection, system prompt extraction, jailbreak~\citep{perez2023jailbreak, wei2023jailbroken}, and refusal bypass~\citep{li2024chatgpt}. Defense approaches include instruction hierarchy~\citep{wallace2024instruction}, perplexity-based detection~\citep{alon2023detecting}, and retrieval-augmented systems using embedding similarity~\citep{reimers2019sentence, xiao2023bge}. Recent work has explored LLM-based classifiers and feature-engineered models for injection detection, though most evaluations remain in-distribution~\citep{liu2023prompt}. In representation learning, \citet{khosla2020supervised} demonstrated supervised contrastive learning, and \citet{jing2022dimensional} identified dimensional collapse. Our work examines a related phenomenon in the security domain: substantial overlap between class centroids in embedding space ($C = 0.986$), which is associated with poor nearest-centroid classification performance, even though trained linear probes can extract discriminative structure.
 
 %===========================================================================
 \section{Dataset}\label{sec:dataset}
 %===========================================================================
 
-All experiments use the Guardrailer Dataset~v1, a curated corpus of 722,842 labeled prompts for training and evaluating prompt injection detection systems. The dataset is publicly available at \url{https://www.kaggle.com/datasets/prashannadeveloper/guardrailer-dataset-v1}.
-
-\subsection{Composition}
-
-The dataset contains 722,842 samples across four attack categories and two risk classes (Table~\ref{tab:dataset_overview}).
+All experiments use the Guardrailer Dataset~v1, a curated corpus of 722,842 labeled prompts publicly available at \url{https://www.kaggle.com/datasets/prashannadeveloper/guardrailer-dataset-v1}.
 
 \begin{table}[H]
 \centering
@@ -141,33 +122,15 @@ system\_prompt\_extraction & 73,769 & 10.2\% \\
 \end{tabular}
 \end{table}
 
-The dataset is moderately imbalanced: 59.9\% malicious (433,066 samples) and 40.1\% benign (289,776 samples).
-
-\subsection{Data Quality}
-
-The dataset underwent six cleaning steps: deduplication (removed 210,138 duplicates), label reconciliation (fixed 114,400 rows), dead column removal, length normalization, extreme length filtering ($<$5 or $>$20K chars), and jailbreak category downsampling (20\%). Validation: no missing values, no duplicate texts, 100\% label--category consistency.
+The dataset is moderately imbalanced: 59.9\% malicious (433,066 samples) and 40.1\% benign (289,776 samples). Data quality procedures included deduplication (removed 210,138 duplicates), label reconciliation (fixed 114,400 rows), dead column removal, length normalization, extreme length filtering ($<$5 or $>$20K chars), and jailbreak category downsampling (20\%).
 
 %===========================================================================
-\section{Phase 6: The Embedding Failure}\label{sec:phase6}
+\section{The Embedding Failure}\label{sec:phase6}
 %===========================================================================
 
-Phase~6 was designed as a routine validation step: test the embedding pipeline on the corrected 722K dataset with proper train-test separation. Instead, it revealed significant performance limitations.
+The embedding pipeline was designed as a routine validation step: test the embedding approach on the corrected 722K dataset with proper train-test separation. Instead, it revealed significant performance limitations.
 
-\subsection{Architecture}
-
-The Phase~6 scoring pipeline used bge-large-en-v1.5~\citep{xiao2023bge} to convert prompts into 1024-dimensional embeddings, then computed 7 weighted signals from those embeddings:
-
-\begin{equation}
-    s_{\text{composite}} = 0.30 \cdot s_{\text{sparse\_idf}} + 0.25 \cdot s_{\text{centroid}} + 0.10 \cdot s_{\text{perplexity}} + 0.10 \cdot s_{\text{entropy}} + 0.10 \cdot s_{\text{token\_freq}} + 0.10 \cdot s_{\text{ngram}} + 0.05 \cdot s_{\text{length}}
-\end{equation}
-
-The centroid signal computes maximum cosine similarity~\citep{duda2001pattern} across 4 category centroids (benign\_control, jailbreak, direct\_injection, system\_prompt\_extraction):
-
-\begin{equation}
-    s_{\text{centroid}} = \max_{c \in \mathcal{C}} \cos(\mathbf{x}, \mu_c)
-\end{equation}
-
-Classification is threshold-based: $y = \mathbb{1}[s_{\text{composite}} \geq \tau]$.
+The embedding scoring pipeline used bge-large-en-v1.5~\citep{xiao2023bge} to convert prompts into 1024-dimensional embeddings, then computed 7 weighted signals: $s_{\text{composite}} = 0.30 \cdot s_{\text{sparse\_idf}} + 0.25 \cdot s_{\text{centroid}} + 0.10 \cdot s_{\text{perplexity}} + 0.10 \cdot s_{\text{entropy}} + 0.10 \cdot s_{\text{token\_freq}} + 0.10 \cdot s_{\text{ngram}} + 0.05 \cdot s_{\text{length}}$. The centroid signal computes maximum cosine similarity~\citep{duda2001pattern} across 4 category centroids: $s_{\text{centroid}} = \max_{c \in \mathcal{C}} \cos(\mathbf{x}, \mu_c)$. Classification is threshold-based: $y = \mathbb{1}[s_{\text{composite}} \geq \tau]$.
 
 \subsection{Experimental Setup}
 
@@ -182,7 +145,7 @@ Classification is threshold-based: $y = \mathbb{1}[s_{\text{composite}} \geq \ta
 
 \begin{table}[H]
 \centering
-\caption{Phase~6 nearest-centroid composite score on 144,569 test samples.}
+\caption{Embedding nearest-centroid composite score on 144,569 test samples.}
 \label{tab:phase6_results}
 \begin{tabular}{@{}lr@{}}
 \toprule
@@ -195,7 +158,7 @@ Precision & 0.6649 \\
 Recall & 0.0044 \\
 FPR & 0.33\% \\
 FNR & 99.56\% \\
-AUC-ROC & 0.5466 \\
+AUC-ROC & 0.5466 (0.547 rounded) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -209,58 +172,17 @@ At threshold 0.50, the system correctly identifies 99.67\% of benign prompts but
 
 \subsection{Signal Discrimination Analysis}
 
-All 7 embedding-derived signals are weak discriminators (Table~\ref{tab:signal_disc}).
-
-\begin{table}[H]
-\centering
-\caption{Per-signal discrimination analysis (144,569 test samples). Thresholds: $\delta > 0.10$ = STRONG, $> 0.05$ = MODERATE, else WEAK.}
-\label{tab:signal_disc}
-\begin{tabular}{@{}lcccc@{}}
-\toprule
-\textbf{Signal} & \textbf{Benign Mean} & \textbf{Malicious Mean} & \textbf{$\delta$} & \textbf{Status} \\
-\midrule
-length\_norm & 1.1799 & 1.1442 & 0.0357 & WEAK \\
-centroid & 0.6995 & 0.7178 & 0.0183 & WEAK \\
-perplexity & 0.6096 & 0.6261 & 0.0165 & WEAK \\
-token\_frequency & 0.3341 & 0.3417 & 0.0077 & WEAK \\
-entropy & 0.7810 & 0.7769 & 0.0040 & WEAK \\
-sparse\_idf & 0.0143 & 0.0181 & 0.0037 & WEAK \\
-ngram\_overlap & 0.0037 & 0.0070 & 0.0032 & WEAK \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The strongest signal (length\_norm, $\delta = 0.036$) has less than half the separation needed for moderate discrimination. The embedding-derived signals show limited discriminative power for this classification task.
+All seven embedding-derived signals showed weak class separation; the strongest, length normalization, achieved only $\delta = 0.036$---less than half the separation needed for moderate discrimination.
 
 \subsection{Threshold Analysis}
 
-No single threshold achieves acceptable performance (Table~\ref{tab:threshold_analysis}).
-
-\begin{table}[H]
-\centering
-\caption{Composite score threshold analysis (144,569 test samples).}
-\label{tab:threshold_analysis}
-\begin{tabular}{@{}lccccc@{}}
-\toprule
-\textbf{Threshold} & \textbf{BA} & \textbf{F1} & \textbf{FNR} & \textbf{FPR} & \textbf{Verdict} \\
-\midrule
-0.30 & 0.4995 & 0.7479 & 0.42\% & 99.68\% & FPR explodes \\
-0.35 (optimal) & 0.5148 & 0.7438 & 3.87\% & 93.17\% & FPR too high \\
-0.40 & 0.5394 & 0.6696 & 28.11\% & 64.01\% & Both poor \\
-0.45 & 0.4978 & 0.2375 & 85.14\% & 15.30\% & FNR too high \\
-0.50 (default) & 0.5005 & 0.0088 & 99.56\% & 0.33\% & FNR near 100\% \\
-0.55 & 0.5001 & 0.0004 & 99.98\% & 0.005\% & FNR $\approx$ 100\% \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Low thresholds produce FPR $>$ 90\%, while high thresholds produce FNR approaching 100\%. The AUC-ROC of 0.547 indicates near-zero discriminative power.
+No threshold provides an acceptable trade-off; AUC $= 0.547$ and the default threshold yields 99.56\% FNR.
 
 %===========================================================================
-\section{Investigation: Why Phase 6 Failed}\label{sec:investigation}
+\section{Investigation: Why the Embedding Method Failed}\label{sec:investigation}
 %===========================================================================
 
-The Phase~6 failure raised a critical question: does the embedding space truly lack discriminative information, or is the failure caused by the classification method? We conducted four experiments to answer this.
+The embedding failure raised a critical question: does the embedding space truly lack discriminative information, or is the failure caused by the classification method? We conducted four experiments to answer this. All investigation experiments use a 10,000-sample stratified subset (8,000 train / 2,000 test) to enable rapid iteration across four embedding models; the hybrid guardrail experiments use the full dataset.
 
 \subsection{Experiment 1: Two-Centroid Cosine-Similarity Classification}
 
@@ -299,13 +221,6 @@ The improvement from 0.5 to 0.76 suggests that binary classification with 2 cent
     \label{fig:roc_curves}
 \end{figure}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.85\textwidth]{figures/fig_centroid_similarity (1).png}
-    \caption{Inter-class centroid dot product after StandardScaler transformation for four embedding models. The red dashed line at 0.95 indicates the collapse threshold. E5-Small shows the highest similarity (0.791), while MiniLM-L6 shows the lowest (0.089). All models remain below the collapse threshold for 2-centroid classification.}
-    \label{fig:centroid_similarity}
-\end{figure}
-
 \subsection{Experiment 2: Euclidean Distance with StandardScaler}
 
 We tested whether StandardScaler~\citep{duda2001pattern} + Euclidean distance outperforms cosine similarity:
@@ -334,14 +249,7 @@ bge-small & 33M & 0.510 & 70.8\% & 0.710 & 0.770 \\
 \end{tabular}
 \end{table}
 
-StandardScaler + Euclidean achieves mean AUC 0.771, slightly better than cosine similarity (0.763). This modified metric produced slightly higher AUC than the unstandardized cosine baseline in our experiment (0.771 vs.\ 0.763); however, the present experiments do not isolate the mechanism responsible for this improvement.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.85\textwidth]{figures/fig_performance_metrics (1).png}
-    \caption{Multi-model performance comparison using nearest-centroid classification on four embedding models. All models achieve similar accuracy ($\sim$70\%), with AUC-ROC ranging from 0.755 to 0.784.}
-    \label{fig:multimodel_performance}
-\end{figure}
+StandardScaler + Euclidean achieves mean AUC 0.771, slightly better than cosine similarity (0.763).
 
 \begin{figure}[H]
     \centering
@@ -350,25 +258,12 @@ StandardScaler + Euclidean achieves mean AUC 0.771, slightly better than cosine 
     \label{fig:roc_curves_euclidean}
 \end{figure}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.95\textwidth]{figures/fig_confusion_matrices (1).png}
-    \caption{Confusion matrices for four embedding models using nearest-centroid classification. All models show similar patterns: high true negative rates but moderate false negative rates, indicating partial but incomplete class separation.}
-    \label{fig:confusion_matrices}
-\end{figure}
-
 \subsection{Experiment 3: Linear Probe (Logistic Regression)}
 
 We trained a logistic regression classifier~\citep{duda2001pattern} on the raw embeddings:
 
 \begin{equation}
     P(y=1|\mathbf{x}) = \sigma(\mathbf{w}^T \mathbf{x} + b)
-\end{equation}
-
-where $\sigma$ is the sigmoid function and $\mathbf{w}^*$ is learned to maximize the Fisher criterion:
-
-\begin{equation}
-    \mathbf{w}^* = \arg\max_{\mathbf{w}} \frac{|\mathbf{w}^T (\mu_{\text{mal}} - \mu_{\text{ben}})|^2}{\mathbf{w}^T \Sigma \mathbf{w}}
 \end{equation}
 
 \begin{table}[H]
@@ -387,12 +282,12 @@ MiniLM-L6 & 22M & 0.091 & 77.1\% & 0.814 & 0.844 \\
 \end{tabular}
 \end{table}
 
-All four models achieve AUC-ROC $>$ 0.84 with linear probes, suggesting that the embedding space contains strong discriminative information.
+All three models achieve AUC-ROC $>$ 0.84 with linear probes, suggesting that the embedding space contains strong discriminative information.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.85\textwidth]{figures/fig7_linear_probe_performance.png}
-    \caption{Linear probe performance by embedding model. All four models achieve AUC-ROC $>$ 0.84, with BGE-Large showing the highest AUC (0.884) and MiniLM-L6 the lowest (0.844). The consistent performance across models suggests that discriminative information is present in all evaluated embedding spaces.}
+    \caption{Linear probe performance by embedding model. All three small models achieve AUC-ROC above 0.84, with e5-small-v2 showing the highest AUC and MiniLM-L6 the lowest. The consistent performance across models suggests that discriminative information is present in the evaluated embedding spaces.}
     \label{fig:linear_probe}
 \end{figure}
 
@@ -400,67 +295,98 @@ All four models achieve AUC-ROC $>$ 0.84 with linear probes, suggesting that the
 
 \begin{table}[H]
 \centering
-\caption{Comparison of classification methods on bge-large-en-v1.5 embeddings.}
+\caption{Comparison of classification methods on bge-large-en-v1.5 embeddings. Row~1 uses the full 722K dataset (70/10/20 split); Rows 2--5 use a 10,000-sample stratified subset (80/20 split). All subsets preserve the original class distribution via stratified sampling.}
 \label{tab:method_comparison}
 \begin{tabular}{@{}lcccc@{}}
 \toprule
-\textbf{Method} & \textbf{Accuracy} & \textbf{AUC-ROC} & \textbf{Centroid $C$} & \textbf{Notes} \\
+\textbf{Method} & \textbf{Acc.} & \textbf{AUC} & \textbf{Centroid $C$} & \textbf{Notes} \\
 \midrule
-4-centroid nearest-centroid & 40.2\% & 0.547 & 0.986 & FAILS \\
+4-centroid nearest-centroid$^{\dagger}$ & 40.2\% & 0.547 & 0.986 & FAILS \\
+4-centroid nearest-centroid & 68.3\% & 0.558 & 0.909 & FAILS \\
 2-centroid cosine similarity & 71.8\% & 0.772 & 0.986 & Works \\
 Euclidean + StandardScaler & 71.2\% & 0.784 & 0.468 & Works \\
-Linear probe (LogReg) & 80.8\% & 0.884 & --- & Best \\
+Linear probe (LogReg) & \textbf{80.8\%} & \textbf{0.884} & --- & Best \\
 \midrule
-ML on 7 signals (RF) & 78.5\%$^\dagger$ & 0.873 & --- & Works \\
+ML on 7 signals (RF)$^{\ddagger}$ & 78.5\% & 0.873 & --- & Works \\
 \bottomrule
-\multicolumn{5}{l}{\small $^\dagger$ Balanced Accuracy}
+\multicolumn{5}{l}{\small $^{\dagger}$ Full 722K dataset (144,569 test samples). Row 2: 10,000 stratified samples (2,000 test).} \\
+\multicolumn{5}{l}{\small $^{\ddagger}$ Balanced Accuracy. Random Forest trained on 7 embedding weighted signals} \\
+\multicolumn{5}{l}{\small \hspace{1.5em} (sparse\_idf, centroid, perplexity, entropy, token\_freq, ngram, length) with 5-fold CV.}
 \end{tabular}
 \end{table}
 
-The linear probe substantially outperforms all centroid-based methods, while the two-centroid approaches achieve intermediate performance. The 4-centroid configuration achieves only 40.2\% accuracy---worse than random guessing---confirming that category-level centroid overlap is catastrophic.
+The linear probe substantially outperforms all centroid-based methods, while the two-centroid approaches achieve intermediate performance. The 4-centroid configuration achieves 40.2\% on the full 722K dataset and 68.3\% on the 10K subset---both below practical thresholds---confirming that category-level centroid overlap is catastrophic regardless of sample size. The 10K result overestimates true performance: centroids computed from fewer samples are noisier estimates, artificially reducing the measured inter-centroid similarity ($C = 0.909$ vs.\ $C = 0.986$ on 722K) and shifting decision boundaries to appear more favorable. The 722K result is the more reliable estimate of nearest-centroid performance. The linear probe (LogisticRegression, $C=1.0$, max\_iter=1000) and the Random Forest baseline operate on fundamentally different inputs: the probe learns a decision boundary directly on 1024-dimensional embeddings, while the RF operates on 7 pre-computed weighted similarity signals derived from those same embeddings.
 
-\subsection{The Critical Discovery: Why 4 Centroids Fail While 2 Centroids Work}
+\subsection{The Critical Discovery: Why 4 Centroids Fail While 2 Centroids Work}\label{sec:4v2}
 
-Phase~6 uses 4 category centroids (benign\_control, jailbreak, direct\_injection, system\_prompt\_extraction) with max-similarity classification:
-
+The embedding method assigns each test prompt to the nearest category centroid using cosine similarity:
 \begin{equation}
-    \hat{y} = \arg\max_{c \in \{\text{benign}, \text{jailbreak}, \text{injection}, \text{extraction}\}} \cos(\mathbf{x}, \mu_c)
+\hat{y} = \arg\max_{c \in \mathcal{C}} \cos(\mathbf{x}, \mu_c) = \arg\max_{c \in \mathcal{C}} \frac{\mathbf{x} \cdot \mu_c}{\|\mathbf{x}\| \|\mu_c\|}
+\label{eq:centroid_classify}
+\end{equation}
+where $\mathcal{C} = \{\text{benign}, \text{jailbreak}, \text{injection}, \text{extraction}\}$ and $\mu_c = \frac{1}{|S_c|}\sum_{i \in S_c} \mathbf{x}_i$ is the mean embedding (centroid) of category $c$ computed from the training set.
+
+With 4 centroids, the classifier produces a 4-class prediction which is collapsed to binary: $\hat{y}_{\text{binary}} = \mathbb{1}[\hat{y} \neq \text{benign}]$. The inter-centroid cosine similarity is:
+\begin{equation}
+C = \frac{1}{|\mathcal{C}|(|\mathcal{C}|-1)} \sum_{i \neq j} \cos(\mu_i, \mu_j)
+\label{eq:centroid_C}
 \end{equation}
 
-This fails because all 4 centroids overlap ($C > 0.95$). The 3 malicious categories (jailbreak, direct\_injection, system\_prompt\_extraction) are semantically similar---all are types of attacks---and their centroids converge in the embedding space.
+In our experiment, $C = 0.986$ across all 4 centroids on the full 722K dataset ($C = 0.909$ on the 10K subset). This means the three malicious centroids are nearly indistinguishable from each other and from the benign centroid in cosine space. When centroids overlap this severely, the argmax decision boundaries become essentially random among the 4 categories, yielding 40.2\% accuracy on 722K and 68.3\% on 10K---both insufficient for practical deployment.
 
-Grouping the three malicious categories into a single malicious class produces a class centroid that aggregates their shared representation while reducing the influence of category-specific variation.
-
-Under the evaluated data, this aggregation increases the observed separation from the benign centroid and improves classification performance.
-
-\subsection{The Centroid Paradox Explained}
-
-The central finding is a paradox: nearest-centroid scoring fails (AUC 0.547) while linear probes succeed (AUC 0.884) on the same embeddings. A plausible explanation is the geometry of high-dimensional embedding spaces.
-
-In high-dimensional embedding spaces, text representations can exhibit anisotropic geometry; this provides a plausible interpretation of the observed centroid overlap: class centroids can converge in cosine similarity space ($C = 0.986$) while remaining linearly separable along other dimensions. The nearest-mean classifier assumes isotropic, equal-covariance Gaussian distributions~\citep{duda2001pattern}, but real-world high-dimensional data rarely satisfies this assumption.
-
-The distinction is practical: the embedding space contains sufficient information for classification, but only when a trained model learns to exploit the high-dimensional structure. Nearest-centroid scoring may fail to exploit this information because it reduces the classification decision to proximity along centroid-defined directions, which may not align with security-relevant distinctions.
-
-\subsection{Why StandardScaler Helps}
-
-StandardScaler transforms each dimension to have mean 0 and variance 1:
-
+When the three malicious categories are merged into a single class, the classification becomes:
 \begin{equation}
-    x_j^{\text{scaled}} = \frac{x_j - \mu_j}{\sigma_j}
+\hat{y}_{\text{binary}} = \mathbb{1}\left[\cos(\mathbf{x}, \mu_{\text{malicious}}) > \cos(\mathbf{x}, \mu_{\text{benign}})\right]
+\label{eq:centroid_binary}
 \end{equation}
 
-This creates a weighted Euclidean distance where low-variance dimensions get higher weight ($w_j = 1/\sigma_j^2$). Standardization changes the relative contribution of embedding dimensions in Euclidean distance, and this modified metric produced higher AUC than the unstandardized cosine baseline in our experiment.
+The merged malicious centroid $\mu_{\text{malicious}} = \frac{1}{|S_{\text{mal}}|}\sum_{i \in S_{\text{mal}}} \mathbf{x}_i$ aggregates the shared representation of all three attack types while reducing category-specific variation. This improves accuracy to 71.8\% (AUC 0.772), a 31.6 pp gain, because the binary decision boundary only needs to separate two clusters rather than resolve four overlapping ones. The centroid similarity $C$ remains 0.986 (measured between the two remaining centroids), confirming that even with 2 centroids, the benign and malicious classes overlap substantially in cosine space---but the binary classification is robust enough to extract a usable boundary.
 
-\subsection{Lessons from the Investigation}
+\subsection{Interpreting the Centroid Paradox}\label{sec:paradox}
 
-The investigation taught us three critical lessons:
-\begin{enumerate}[leftmargin=*]
-    \item \textbf{Initial promise can be misleading.} Phases 1--5 results (76\% $\to$ 94.5\%) appeared to validate the embedding approach, but rigorous evaluation revealed a fundamental flaw.
-    \item \textbf{The failure is methodological, not architectural.} The embedding space contains discriminative information (as indicated by linear probes), but nearest-centroid scoring cannot access it.
-    \item \textbf{Class structure sensitivity.} Centroid-based classification is extremely sensitive to the number of centroids: 2 centroids work, 4 centroids fail.
-\end{enumerate}
+The central finding of our investigation is a paradox: nearest-centroid scoring fails (AUC 0.547) while linear probes succeed (AUC 0.884) on the same embeddings. This paradox reveals a fundamental limitation of centroid-based classification in high-dimensional spaces.
 
-These lessons motivated a pivot to a lightweight, feature-based approach that encodes security-relevant patterns directly.
+A nearest-centroid classifier assigns $\hat{y} = \arg\max_c \cos(\mathbf{x}, \mu_c)$. This is equivalent to a nearest-neighbor classifier with $k=1$ where the prototype for each class is its mean. The decision boundary between two classes $i$ and $j$ is the hyperplane:
+\begin{equation}
+\mathbf{w} = \mu_i - \mu_j, \quad \text{classify as } i \text{ if } \mathbf{x} \cdot \mathbf{w} > \frac{\|\mu_i\|^2 - \|\mu_j\|^2}{2}
+\label{eq:centroid_boundary}
+\end{equation}
+
+This boundary depends only on the class means. When $C = \mu_i \cdot \mu_j \approx 1$ (as in our experiment where $C = 0.986$), the means are nearly collinear, and the boundary becomes extremely sensitive to small perturbations in the data. The classifier cannot exploit structure beyond the first moment of each class distribution.
+
+A logistic regression linear probe learns a weight vector $\mathbf{w}^*$ that maximizes the likelihood of the training data:
+\begin{equation}
+\mathbf{w}^* = \arg\max_{\mathbf{w}} \sum_{i=1}^{n} \left[ y_i \log \sigma(\mathbf{w}^\top \mathbf{x}_i) + (1-y_i) \log(1 - \sigma(\mathbf{w}^\top \mathbf{x}_i)) \right]
+\label{eq:logreg}
+\end{equation}
+where $\sigma(z) = 1/(1+e^{-z})$ is the sigmoid function. Unlike the centroid classifier, logistic regression optimizes $\mathbf{w}$ over all training examples simultaneously, finding a direction in the 1024-dimensional space that best separates the classes. It is not constrained to use the class means as prototypes.
+
+In high-dimensional spaces ($d = 1024$), two classes can have nearly identical means ($C = 0.986$) while remaining linearly separable along other dimensions. The centroid classifier can only see the projection onto the $\mu_i - \mu_j$ direction, which is uninformative when $C \approx 1$. The linear probe can find a separating hyperplane in the full 1024-dimensional space, exploiting structure that is invisible to the centroid-based approach. This explains why linear probes achieve AUC 0.844--0.884 while nearest-centroid achieves only 0.547 on the same embeddings.
+
+\subsection{Why StandardScaler Helps}\label{sec:scaler}
+
+The Euclidean distance with StandardScaler outperforms cosine similarity (AUC 0.784 vs.\ 0.772) despite using the same 2-centroid classification. We analyze why through the lens of distance weighting.
+
+StandardScaler transforms each dimension $j$ to zero mean and unit variance:
+\begin{equation}
+x_j^{\text{scaled}} = \frac{x_j - \mu_j}{\sigma_j}
+\label{eq:scaler}
+\end{equation}
+where $\mu_j$ and $\sigma_j$ are the mean and standard deviation of dimension $j$ across the training set. The squared Euclidean distance between two scaled points $\mathbf{x}$ and $\mathbf{y}$ is:
+\begin{equation}
+d^2(\mathbf{x}^{\text{scaled}}, \mathbf{y}^{\text{scaled}}) = \sum_{j=1}^{d} \left(\frac{x_j - y_j}{\sigma_j}\right)^2 = \sum_{j=1}^{d} \frac{1}{\sigma_j^2} (x_j - y_j)^2
+\label{eq:weighted_euc}
+\end{equation}
+
+This is equivalent to a weighted Euclidean distance where each dimension $j$ receives weight $w_j = 1/\sigma_j^2$. Dimensions with low variance ($\sigma_j$ small) receive high weight, while high-variance dimensions are downweighted. In the context of bge-large-en-v1.5 embeddings, which are normalized to unit length, most dimensions have very similar variance across the dataset. However, dimensions that are discriminative between classes tend to have lower within-class variance---they are ``stable'' for each class but differ between classes. StandardScaler amplifies these dimensions by assigning them higher weight.
+
+Cosine similarity, by contrast, normalizes only the vector magnitude:
+\begin{equation}
+\cos(\mathbf{x}, \mu_c) = \frac{\mathbf{x} \cdot \mu_c}{\|\mathbf{x}\| \|\mu_c\|}
+\label{eq:cosine}
+\end{equation}
+
+This treats all dimensions equally (uniform weight $w_j = 1$), regardless of their discriminative power. StandardScaler's inverse-variance weighting provides a form of automatic feature selection, upweighting dimensions that vary little within classes but differ between them. This explains the observed AUC improvement from 0.772 (cosine) to 0.784 (Euclidean + StandardScaler) with the same 2-centroid classification method.
 
 %===========================================================================
 \section{Hybrid Guardrail V3: Architecture}\label{sec:hybrid}
@@ -470,104 +396,33 @@ The hybrid guardrail combines three signal layers with a stacking ensemble class
 
 \subsection{Feature Engineering (117 Features)}
 
-The model extracts 117 handcrafted features from each prompt, organized into categories:
-
-\begin{table}[H]
-\centering
-\caption{Handcrafted feature categories (selected).}
-\label{tab:feature_categories}
-\begin{tabular}{@{}p{3.5cm}p{9cm}@{}}
-\toprule
-\textbf{Category} & \textbf{Features (count)} \\
-\midrule
-Basic Statistics (6) & char\_count, word\_count, avg\_word\_length, max\_word\_length, sentence\_count, avg\_sentence\_length \\
-Character Ratios (6) & uppercase\_ratio, digit\_ratio, special\_char\_ratio, space\_ratio, newline\_ratio, tab\_ratio \\
-Entropy (4) & char\_entropy, word\_entropy, unique\_word\_ratio, hapax\_ratio \\
-Attack Keywords (3) & attack\_keyword\_count, has\_attack\_keyword, keyword\_density \\
-Encoding Detection (6) & encoding\_base64, encoding\_hex, encoding\_url\_encoded, encoding\_unicode\_escape, encoding\_html\_entity, total\_encoding\_hits \\
-Structural Patterns (6) & structural\_instruction\_override, structural\_role\_hijack, structural\_system\_extraction, structural\_delimiter\_injection, structural\_persona\_switch, total\_structural\_hits \\
-Lexical Repetition (3) & word\_repeat\_ratio, bigram\_repeat\_ratio, trigram\_repeat\_ratio \\
-Structural Flags (10) & has\_delimiter, has\_xml\_tags, has\_brackets, has\_colon\_separated, starts\_with\_imperative, contains\_question, exclamation\_ratio, triple\_repeat, word\_length\_variance, has\_parenthetical \\
-Advanced Structural (12) & instruction\_nesting\_depth, role\_transition\_count, markdown\_density, delimiter\_depth, escape\_char\_density, unicode\_anomaly\_score, paragraph\_count, has\_system\_marker, has\_user\_marker, has\_assistant\_marker, caps\_sequence\_count, has\_inline\_code \\
-Linguistic (12) & imperative\_verb\_ratio, negation\_density, question\_density, modal\_verb\_count, modal\_verb\_ratio, second\_person\_ratio, third\_person\_ratio, temporal\_marker\_count, conditional\_marker\_count, politeness\_marker\_count, urgency\_marker\_count, has\_second\_person \\
-Readability (10) & char\_trigram\_entropy, sliding\_ttr\_50, sliding\_ttr\_100, flesch\_kincaid\_grade, coleman\_liau\_index, avg\_syllables, max\_syllables, sentence\_length\_variance, word\_length\_entropy \\
-N-gram Diversity (2) & bigram\_diversity, trigram\_diversity \\
-Injection-Specific (8) & has\_encoded\_payload\_hint, encoding\_instruction\_ratio, has\_persona\_definition, has\_negative\_constraints, has\_output\_instruction, has\_system\_override, persona\_keyword\_count, unrestricted\_keyword\_count \\
-Punctuation (10) & colon\_count, semicolon\_count, pipe\_count, angle\_bracket\_count, curly\_brace\_count, square\_bracket\_count, backtick\_count, tilde\_count, hyphen\_sequence\_count, underscore\_sequence\_count \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Key mathematical formulations for selected features:
-
-\paragraph{Shannon Entropy (Character-level):}
-\begin{equation}
-    H_{\text{char}} = -\sum_{c \in \text{freq}} \frac{c}{N} \log_2\left(\frac{c}{N}\right)
-\end{equation}
-
-\paragraph{Flesch-Kincaid Grade Level:}
-\begin{equation}
-    FK = 0.39 \times \frac{W}{S} + 11.8 \times \frac{SYL}{W} - 15.59
-\end{equation}
-
-\paragraph{Sliding Window TTR:}
-\begin{equation}
-    TTR_{\text{slide}}(w) = \frac{1}{|\text{windows}|} \sum_{i=0}^{n-w} \frac{|\text{unique}(ws[i:i+w])|}{w}
-\end{equation}
-
-\paragraph{Bigram/Trigram Repeat Ratio:}
-\begin{equation}
-    \text{Repeat}_n = 1 - \frac{|\text{unique n-grams}|}{|\text{total n-grams}|}
-\end{equation}
+The model extracts 117 handcrafted features from each prompt, organized into 14 categories: basic statistics (6), character ratios (6), entropy (4), attack keywords (3), encoding detection (6), structural patterns (6), lexical repetition (3), structural flags (10), advanced structural (12), linguistic (12), readability (10), n-gram diversity (2), injection-specific (8), and punctuation (10).
 
 \subsection{Pattern Matching (Aho-Corasick)}
 
-An Aho-Corasick automaton~\citep{aho1975multi} matches 47 regex patterns in a single pass:
-
-\begin{equation}
-    \text{score}_{\text{regex}}(t) = \max_{p \in \mathcal{P}} \begin{cases} s_p & \text{if } p \text{ matches } t \\ 0 & \text{otherwise} \end{cases}
-\end{equation}
-
-Patterns include instruction overrides (0.95), role hijacking (0.90), system extraction (0.95), and delimiter injection (0.90).
+An Aho-Corasick automaton~\citep{aho1975multi} matches 47 regex patterns in a single pass: $\text{score}_{\text{regex}}(t) = \max_{p \in \mathcal{P}} s_p$ if $p$ matches $t$, else 0. Patterns include instruction overrides (0.95), role hijacking (0.90), system extraction (0.95), and delimiter injection (0.90).
 
 \subsection{TF-IDF Similarity (Quantized)}
 
-Quantized cosine similarity using int8 vectors for memory efficiency:
-
-\begin{equation}
-    \text{sim}_{\text{quant}}(q, c) = \frac{1}{1 + e^{-5.0 \times \left(\frac{q \cdot c}{127} - 0.3\right)}}
-\end{equation}
-
-where $q = \text{round}(d_{\text{norm}} \times 127)$ quantizes the L2-normalized TF-IDF vector~\citep{manning1999foundations} to int8.
+TF-IDF similarity~\citep{manning1999foundations} was quantized to int8 for memory-efficient inference.
 
 \subsection{Stacking Ensemble}
 
-The stacking classifier combines 3 base learners with a meta-learner:
-
-\begin{equation}
-    P(y=1|x) = \sigma\left(\beta_0 + \beta_1 \cdot P_{\text{xgb}}(x) + \beta_2 \cdot P_{\text{lgb}}(x) + \beta_3 \cdot P_{\text{rf}}(x) + \beta_4 \cdot x\right)
-\end{equation}
-
-\begin{itemize}[leftmargin=*]
-    \item \textbf{XGBoost:} 500 trees, max\_depth=6, learning\_rate=0.05, subsample=0.8
-    \item \textbf{LightGBM:} 500 trees, max\_depth=6, learning\_rate=0.05
-    \item \textbf{RandomForest:} 300 trees, max\_depth=12, min\_samples\_split=5
-    \item \textbf{Meta-learner:} LogisticRegression~\citep{duda2001pattern}(C=1.0, max\_iter=1000)
-\end{itemize}
-
-\subsection{Isotonic Calibration}
-
-Raw stacking probabilities are calibrated using isotonic regression~\citep{duda2001pattern}:
-
-\begin{equation}
-    \hat{p}_{\text{cal}} = f_{\text{isotonic}}(\hat{p}_{\text{stk}})
-\end{equation}
+The stacking classifier combines XGBoost (500 trees, depth 6, lr 0.05), LightGBM (500 trees, depth 6, lr 0.05), and Random Forest (300 trees, depth 12) as base learners, with a logistic regression meta-learner, followed by isotonic calibration.
 
 \subsection{Ensemble Decision}
 
+The final ensemble combines the three signal layers:
 \begin{equation}
-    \text{ensemble} = 0.10 \cdot \text{score}_{\text{regex}} + 0.10 \cdot \text{score}_{\text{sim}} + 0.80 \cdot P_{\text{cal}}(x)
+\text{ensemble} = w_0 \cdot \text{score}_{\text{regex}} + w_1 \cdot \text{score}_{\text{sim}} + w_2 \cdot P_{\text{cal}}(x)
+\label{eq:ensemble}
 \end{equation}
+where $P_{\text{cal}}(x)$ is the calibrated stacking probability. The weights $[w_0, w_1, w_2]$ are initialized to $[0.10, 0.10, 0.80]$ and adapted online during inference via softmax:
+\begin{equation}
+w_i^{(t)} = \frac{\exp(a_i^{(t)})}{\sum_j \exp(a_j^{(t)})}, \quad a_i^{(t)} = \alpha \cdot a_{\text{comp},i}^{(t)} + (1-\alpha) \cdot a_i^{(t-1)}
+\label{eq:adaptive_weights}
+\end{equation}
+where $\alpha = 0.05$ and $a_{\text{comp},i} = [1 - \text{fp\_rate}_i, 1 - \text{fn\_rate}_i, \text{accuracy}_i]$ for each component. The stacking probability dominates because it achieves the highest individual accuracy; the adaptive mechanism reinforces this assignment. The regex and similarity signals remain at low weights because their individual discriminative power is lower.
 
 \subsection{Training Setup}
 
@@ -594,9 +449,9 @@ Raw stacking probabilities are calibrated using isotonic regression~\citep{duda2
 \textbf{Metric} & \textbf{Value} \\
 \midrule
 Accuracy & 0.830 \\
-Precision & 0.835 \\
-Recall & 0.830 \\
-F1-Score & 0.827 \\
+Precision (Weighted) & 0.835 \\
+Recall (Weighted) & 0.830 \\
+F1-Score (Weighted) & 0.827 \\
 \midrule
 \textbf{Confusion Matrix} & \\
 True Positives & 38,543 \\
@@ -609,25 +464,18 @@ False Negatives & 4,764 \\
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.95\textwidth]{figures/confusion_matrix.png}
+    \includegraphics[width=0.65\textwidth]{figures/confusion_matrix.png}
     \caption{Confusion matrix for Hybrid Guardrail V3 on the test set. The model achieves 21,734 true negatives and 38,543 true positives, with 7,244 false positives and 4,764 false negatives.}
     \label{fig:hybrid_confusion}
 \end{figure}
 
-The model is biased toward moderate recall (83.0\%) with balanced precision and recall, though its false-positive rate (25.0\% of safe prompts misclassified) would require reduction before deployment in user-facing settings.
+The model achieves moderate recall (83.0\%) with balanced precision. The AUC-ROC of 0.908 indicates strong ranking performance across thresholds on the in-distribution test set; however, at the selected operating threshold, the false-positive rate remains 25.0\% of safe prompts misclassified, which would require reduction before deployment in user-facing settings.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.75\textwidth]{figures/roc_curve.png}
+    \includegraphics[width=0.60\textwidth]{figures/roc_curve.png}
     \caption{ROC curve for Hybrid Guardrail V3. The model achieves AUC = 0.908, indicating strong ranking performance across classification thresholds on the evaluated in-distribution test set.}
     \label{fig:hybrid_roc}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.75\textwidth]{figures/pr_curve.png}
-    \caption{Precision-Recall curve for Hybrid Guardrail V3. The model achieves Average Precision (AP) = 0.935, maintaining high precision across most recall levels.}
-    \label{fig:hybrid_pr}
 \end{figure}
 
 \begin{figure}[H]
@@ -636,27 +484,6 @@ The model is biased toward moderate recall (83.0\%) with balanced precision and 
     \caption{Score distribution for Hybrid Guardrail V3. The green dashed line at threshold = 0.460 separates safe (blue) and malicious (red) predictions. The distributions show substantial separation on the evaluated in-distribution test set, with overlap concentrated in the middle score range.}
     \label{fig:hybrid_score_dist}
 \end{figure}
-
-\subsection{Comparison with Phase~6 Embedding Pipeline}
-
-\begin{table}[H]
-\centering
-\caption{Apples-to-apples comparison on the same dataset. Embedding pipeline uses bge-large-en-v1.5 with 7 weighted signals; hybrid uses 117 handcrafted features + TF-IDF + stacking ensemble.}
-\label{tab:comparison}
-\begin{tabular}{@{}lcc@{}}
-\toprule
-\textbf{Metric} & \textbf{Phase 6 (Embedding)} & \textbf{Hybrid V3} \\
-\midrule
-Balanced Accuracy & 0.501 & \textbf{0.820} \\
-F1-Score & 0.009 & \textbf{0.827} \\
-AUC-ROC & 0.547 & \textbf{0.908} \\
-Precision & 0.665 & \textbf{0.835} \\
-Recall & 0.004 & \textbf{0.830} \\
-FPR & 0.3\% & 25.0\% \\
-FNR & 99.6\% & \textbf{16.4\%} \\
-\bottomrule
-\end{tabular}
-\end{table}
 
 \subsection{Transformation-Based Robustness Evaluation}
 
@@ -684,12 +511,12 @@ Long Context & 93.5\% & PASS & 1.5s \\
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.95\textwidth]{figures/robustness.png}
+    \includegraphics[width=0.85\textwidth]{figures/robustness.png}
     \caption{Transformation-based robustness evaluation across 8 attack transformations ($n=200$). The green dashed line at 80\% indicates the minimum acceptable detection rate. Misspelling (63.5\%) is the only transformation falling below this threshold, while Base64 encoding achieves 100\% detection. These results reflect fixed transformations only; adaptive adversarial attacks were not evaluated.}
     \label{fig:robustness}
 \end{figure}
 
-The model maintains detection rates $\geq$ 80\% across 7 of the 8 evaluated fixed transformations. Misspelling is the critical weakness (63.5\%), where character substitution destroys word-level TF-IDF features. These results reflect robustness to fixed transformations only; the model was not evaluated against adaptive adversarial attacks that iteratively optimize to evade detection.
+The model maintains detection rates $\geq$ 80\% across 7 of the 8 evaluated fixed transformations. Misspelling is the critical weakness (63.5\%), where character substitution destroys word-level TF-IDF features. With $n=200$ per transformation, these detection rates have approximate 95\% confidence intervals of $\pm$5--7 percentage points; differences smaller than this margin should be interpreted cautiously. These results reflect robustness to fixed transformations only; the model was not evaluated against adaptive adversarial attacks that iteratively optimize to evade detection.
 
 \subsection{Cross-Dataset Generalization}\label{sec:cross_dataset}
 
@@ -707,85 +534,31 @@ Jailbreak Classification & 0.590 & 0.680 & 4,350 & $-$24.0 pp \\
 Jailbreak Complete DS & 0.422 & 0.571 & 4,350 & $-$40.8 pp \\
 JailbreakHub & 0.496 & 0.220 & 4,350 & $-$33.4 pp \\
 \midrule
-\textbf{Cross-dataset avg} & \textbf{0.514} & \textbf{0.535} & & \textbf{$-$31.6 pp} \\
+\textbf{Cross-dataset avg} & \textbf{0.515} & \textbf{0.535} & & \textbf{$-$31.5 pp} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.95\textwidth]{figures/cross_dataset.png}
+    \includegraphics[width=0.85\textwidth]{figures/cross_dataset.png}
     \caption{Cross-dataset generalization results. The model trained on Guardrailer Dataset~v1 shows severe performance degradation on four external datasets. In-distribution accuracy (83.0\%) drops to 42.2--59.0\% on external benchmarks, with JailbreakHub showing particularly poor performance (F1 = 0.220).}
     \label{fig:cross_dataset}
 \end{figure}
 
-This is the most important limitation identified by the external evaluation. The model achieves 83.0\% in-distribution accuracy but drops to 51.4\% on external datasets---a 31.6 percentage-point decline. Performance on Jailbreak Complete DS (42.2\%) is below the 0.50 reference level for balanced binary classification, suggesting substantial distribution-specific failure on this benchmark.
+This is the most important limitation identified by the external evaluation. The model achieves 83.0\% in-distribution accuracy but drops to 51.5\% on the four tested external distributions---a 31.5 percentage-point decline. Performance on Jailbreak Complete DS (42.2\%) is below the 0.50 reference level for balanced binary classification, suggesting substantial distribution-specific failure on this benchmark. These results reflect performance under the tested distribution shifts; the external benchmarks do not represent all possible real-world prompt injections.
 
 \subsection{Feature Importance}
 
-\begin{table}[H]
-\centering
-\caption{Top 10 features by RandomForest importance.}
-\label{tab:feature_imp}
-\begin{tabular}{@{}rlrl@{}}
-\toprule
-\textbf{Rank} & \textbf{Feature} & \textbf{Importance} & \textbf{Category} \\
-\midrule
-1 & trigram\_repeat\_ratio & 0.020 & Lexical \\
-2 & bigram\_diversity & 0.020 & Lexical \\
-3 & bigram\_repeat\_ratio & 0.020 & Lexical \\
-4 & trigram\_diversity & 0.016 & Lexical \\
-5 & word\_repeat\_ratio & 0.013 & Lexical \\
-6 & hapax\_ratio & 0.013 & Lexical \\
-7 & sliding\_ttr\_100 & 0.012 & Lexical \\
-8 & pwned & 0.010 & TF-IDF \\
-9 & char\_entropy & 0.010 & Entropy \\
-10 & sliding\_ttr\_50 & 0.010 & Lexical \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.85\textwidth]{figures/feature_importance.png}
-    \caption{Top 20 features by RandomForest importance. Lexical repetition features (trigram\_repeat\_ratio, bigram\_diversity, bigram\_repeat\_ratio) dominate the top positions, followed by TF-IDF and entropy features.}
-    \label{fig:feature_importance}
-\end{figure}
-
-Lexical repetition features dominate, capturing the template-like patterns common in jailbreak attempts.
+Lexical repetition and diversity features were among the most important handcrafted features, capturing the template-like patterns common in jailbreak attempts.
 
 \subsection{Computational Requirements}
 
-\begin{table}[H]
-\centering
-\caption{Hybrid guardrail computational profile.}
-\label{tab:resources}
-\begin{tabular}{@{}lp{9cm}@{}}
-\toprule
-\textbf{Resource} & \textbf{Value} \\
-\midrule
-Vector database & None required \\
-GPU required & No (inference is CPU-only; training uses GPU for XGBoost/LightGBM) \\
-Inference latency & 0.149\,ms per prompt \\
- & (single-threaded CPU, batch size 1; includes TF-IDF vectorization, feature extraction, model prediction; excludes model loading) \\
-Throughput & 6,727 prompts/sec \\
-Training time & $\sim$5 hours (P100 GPU) \\
-Hardware & Kaggle P100-PCIE-16GB, 4 cores, 33.7\,GB RAM \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Inference latency was measured on CPU with batch size 1, averaged over 10,000 runs after 1,000 warm-up iterations. The measurement includes TF-IDF vectorization, 117-feature extraction, Aho-Corasick pattern matching, stacking ensemble prediction, and isotonic calibration. Model loading and data preprocessing are excluded. Latency may vary with prompt length, CPU model, and system load.
-
-The hybrid guardrail's lightweight profile enables deployment on commodity hardware without vector database infrastructure or GPU acceleration.
+Inference requires no GPU or vector database and achieved 0.149\,ms/prompt (6,727 prompts/s) on a single-threaded CPU at batch size 1. Timing included TF-IDF vectorization, feature extraction, Aho-Corasick matching, ensemble prediction, and calibration, averaged over 10,000 runs after 1,000 warm-up iterations.
 
 \subsection{Ablation Study}\label{sec:ablation}
 
 To understand the contribution of each component, we conducted a focused ablation study on the Hybrid Guardrail V3. The study evaluates three core configurations---full model, TF-IDF only, and handcrafted features only---plus leave-one-feature-group-out variants. All experiments use the same dataset, 80/10/10 stratified split (578,273 train / 72,284 val / 72,285 test), stacking ensemble architecture, random seed (42), and calibration protocol.
-
-\subsubsection{Experimental Design}
-
-The ablation systematically varies two axes: (1)~whether TF-IDF features (5,000 word-level, bigrams, sublinear TF) are included, and (2)~whether the 117 handcrafted features are included or selectively removed by group. The feature groups are: text\_statistics~(6), char\_composition~(6), entropy\_diversity~(14), keywords~(3), encoding\_patterns~(6), structural\_patterns~(6), linguistic~(13), attack\_specific~(9), injection\_detection~(4), readability~(7), and others.
 
 \begin{table}[H]
 \centering
@@ -802,168 +575,51 @@ Handcrafted only & 117 & 0.800 & 0.802 & 0.800 & 0.797 & 0.0122 & 0.42 \\
 Full $-$ text\_statistics & 5,111 & 0.850 & 0.847 & 0.850 & 0.847 & 0.0107 & 0.44 \\
 \bottomrule
 \end{tabular}
-\end{table}
-
-\subsubsection{Per-Class Breakdown}
-
-The per-class classification reports reveal where each configuration succeeds and fails (Table~\ref{tab:ablation_perclass}).
-
-\begin{table}[H]
-\centering
-\caption{Per-class F1 scores from ablation study.}
-\label{tab:ablation_perclass}
-\begin{tabular}{@{}lcccc@{}}
-\toprule
-\textbf{Experiment} & \textbf{Safe P} & \textbf{Safe R} & \textbf{Mal. P} & \textbf{Mal. R} \\
-\midrule
-Full baseline & 0.82 & 0.75 & 0.84 & 0.89 \\
-TF-IDF only & \textbf{0.84} & \textbf{0.78} & \textbf{0.86} & \textbf{0.90} \\
-Handcrafted only & 0.80 & 0.67 & 0.80 & 0.89 \\
-Full $-$ text\_statistics & 0.83 & 0.77 & 0.85 & 0.90 \\
-\bottomrule
-\end{tabular}
+\medskip
+\footnotesize{Feature counts refer to the input feature vector (117 handcrafted + 5,000 TF-IDF) before the ensemble's derived prediction features and calibration stage.}
 \end{table}
 
 \subsubsection{Key Findings}
 
-\textbf{Finding 1: TF-IDF alone outperforms the full hybrid.} The TF-IDF-only configuration achieves 85.0\% accuracy and F1$=$0.848, exceeding the full model (83.0\%, F1$=$0.827) by 2.0 percentage points. This is counterintuitive: removing 117 engineered features \textit{improves} performance. The handcrafted features appear to introduce noise or redundancy that degrades the stacking ensemble's ability to learn decision boundaries.
-
-\textbf{Finding 2: Handcrafted features alone are the weakest configuration.} With only 117 features and no TF-IDF, accuracy drops to 80.0\% and Safe-class recall falls to 67\%---meaning 33\% of benign prompts are misclassified as malicious. The handcrafted features capture some attack patterns (89\% malicious recall) but lack the vocabulary coverage needed to distinguish safe prompts.
-
-\textbf{Finding 3: The full model is worse than its best component.} The full hybrid (F1$=$0.827) underperforms both TF-IDF-only (F1$=$0.848) and even the text\_stats-removed variant (F1$=$0.847). This suggests the 117 handcrafted features do not complement TF-IDF---they interfere with it. The stacking ensemble, despite its capacity to weight features optimally, cannot fully compensate for the noise introduced by handcrafted features.
-
-\textbf{Finding 4: TF-IDF is better calibrated.} The TF-IDF-only model achieves ECE$=$0.0069, less than half the full model's ECE$=$0.0161. Fewer features reduce overfitting to the training distribution, producing more reliable probability estimates.
-
-\subsubsection{Training Dynamics}
-
-The training AUC curves further support TF-IDF dominance. The TF-IDF-only model reaches training AUC$=$0.8755 and validation AUC$=$0.8691, while the full model only reaches training AUC$=$0.7865 and validation AUC$=$0.7869. The handcrafted-only model is worst at training AUC$=$0.7690. The gap between TF-IDF-only and the full model (0.87 vs 0.79 validation AUC) indicates that adding the handcrafted features is associated with substantially lower validation performance in the evaluated ensemble.
-
-\subsubsection{Implications}
-
-The ablation results challenge a core assumption of the hybrid guardrail: that handcrafted security features complement distributional representations. Under the evaluated setting, TF-IDF alone captures sufficient lexical and statistical signal for prompt injection detection, and the 117 handcrafted features add noise without improving generalization.
-
-This finding has practical implications:
-\begin{enumerate}[leftmargin=*]
-    \item \textbf{Model simplification.} A TF-IDF-only stacking ensemble achieves better performance with 5,000 features instead of 5,117, reducing both training time and inference latency.
-    \item \textbf{Feature engineering re-evaluation.} The 117 handcrafted features, despite being designed for security-specific patterns (attack keywords, encoding detection, structural anomalies), do not improve upon what TF-IDF already captures. This suggests that the training distribution's attack patterns are sufficiently lexicalized that distributional features suffice.
-    \item \textbf{Generalization caveat.} The cross-dataset generalization gap (Section~\ref{sec:cross_dataset}) may be partially attributable to the handcrafted features overfitting to training-distribution-specific patterns. A TF-IDF-only model might generalize better, though this remains to be verified on external benchmarks.
-\end{enumerate}
+TF-IDF-only achieves 85.0\% accuracy and F1$=$0.848, exceeding the full model (83.0\%, F1$=$0.827) by 2.0 pp. Training and validation AUC were also higher for TF-IDF-only than the full configuration, consistent with the test-set ablation. Under the evaluated setting, the 117 handcrafted features did not provide complementary predictive value beyond TF-IDF. This result is specific to this dataset, model configuration, and experimental protocol; it does not demonstrate that handcrafted features are universally uninformative. Formal statistical significance testing was not conducted; the consistent direction of improvement across accuracy, F1, and ECE provides converging evidence for the finding.
 
 %===========================================================================
 \section{Discussion}\label{sec:discussion}
 %===========================================================================
 
-\subsection{Strengths of the Hybrid Guardrail}
+\subsection{Main Findings and Practical Strengths}
 
-\begin{enumerate}[leftmargin=*]
-    \item \textbf{Fast inference.} At 0.149\,ms per prompt (6,727/sec), the model demonstrates low measured inference latency.
+The central finding is that nearest-centroid scoring on general-purpose embeddings fails (AUC 0.547), yet the same embedding space contains discriminative information accessible to trained classifiers (AUC 0.844--0.884). This motivated a lightweight hybrid guardrail achieving 83.0\% in-distribution accuracy at 0.149\,ms/prompt (6,727 prompts/s) on CPU, with well-calibrated probabilities (ECE $= 0.0161$) and 100\% Base64 detection.
 
-    \item \textbf{Strong AUC.} An AUC-ROC of 0.908 indicates good ranking ability under the evaluated test distribution---the model ranks malicious prompts higher than safe prompts 90.8\% of the time.
+\subsection{Limitations and Failure Modes}
 
-    \item \textbf{Well-calibrated.} An ECE of 0.0161 (approximately 0.017 when rounded) indicates relatively low calibration error on the evaluated in-distribution test set, enabling principled threshold selection.
+\textbf{Cross-dataset generalization failure.} In-distribution accuracy drops from 83.0\% to 51.5\% ($-$31.5 pp) on four external benchmarks. Jailbreak Complete DS achieves 42.2\% (below 0.50), and JailbreakHub achieves F1 $= 0.220$, indicating dataset-specific pattern memorization.
 
-    \item \textbf{Moderate recall.} At 83.0\%, the model detects a substantial fraction of malicious prompts in the evaluated in-distribution dataset, although its false-positive rate (25.0\%) would require substantial reduction before user-facing deployment.
+\textbf{Misspelling vulnerability.} Detection drops to 63.5\% against character substitution, confirming reliance on character-exact TF-IDF matching.
 
-    \item \textbf{Encoding detection.} Base64 detection achieves 100\% on the evaluated transformations, catching a common obfuscation technique.
+\textbf{High false-positive rate.} At 25.0\%, the FPR would generate unacceptable noise in user-facing settings.
 
-    \item \textbf{Lightweight deployment.} With no GPU or vector database requirements, the model can deploy on commodity hardware.
+\textbf{Feature limitations.} Under the evaluated setting, the 117 handcrafted features did not complement TF-IDF (ablation: TF-IDF-only 85.0\% vs.\ full 83.0\%). The recommended deployment is TF-IDF-only (ECE 0.0069 vs.\ 0.0161).
 
-    \item \textbf{Adaptive components.} The system architecture includes EMA-based threshold and weight updates intended to support adaptation to distribution drift; their effectiveness under real distribution shift was not evaluated in this study.
-\end{enumerate}
+\textbf{Limited robustness evaluation.} The 8 tested transformations ($n=200$) did not include adaptive adversarial attacks.
 
-\subsection{Weaknesses of the Hybrid Guardrail}
+\textbf{Embedding compute constraints.} The linear probe, 2-centroid cosine similarity, and Euclidean + StandardScaler experiments (Table~\ref{tab:method_comparison}, Rows 2--5) were evaluated on 10,000 stratified samples due to the computational cost of generating and storing 1024-dimensional embeddings for the full 722K dataset. This highlights a practical limitation of embedding-based approaches: they require substantial compute for both training and inference compared to lightweight feature-based methods.
 
-\begin{enumerate}[leftmargin=*]
-    \item \textbf{Cross-dataset generalization failure.} The 31.6 percentage-point decline from 83.0\% in-distribution to 51.4\% cross-dataset accuracy is the most critical weakness. This suggests the model may have learned dataset-specific characteristics rather than fully generalizable attack patterns.
+\subsection{Practical Implications}
 
-    \item \textbf{Misspelling vulnerability.} Detection drops to 63.5\% with character substitution (e.g., ``ignore'' $\to$ ``ign0re''). Character-level obfuscation defeats word-level TF-IDF features and regex patterns.
-
-    \item \textbf{High false positive rate.} 7,244 safe prompts are misclassified as malicious (25.0\% of safe class). In production, this means approximately 1 in 4 legitimate user queries would be blocked.
-
-    \item \textbf{TF-IDF vocabulary lock.} Features are tied to training vocabulary. External datasets containing out-of-vocabulary tokens receive degraded representations.
-
-    \item \textbf{No semantic understanding.} The model is purely statistical---it cannot reason about intent, context, or meaning. It relies on surface-level patterns that may not generalize.
-
-    \item \textbf{Redundant handcrafted features.} The ablation study (Section~\ref{sec:ablation}) reveals that TF-IDF alone outperforms the full hybrid by 2.0 percentage points. Under the evaluated setting, the 117 handcrafted features do not provide complementary predictive value beyond TF-IDF and their inclusion reduces performance relative to the TF-IDF-only configuration, suggesting that the model's complexity is not justified by its performance.
-
-    \item \textbf{Training data composition.} The model was trained on a single dataset (Guardrailer Dataset~v1). Dataset composition and distribution shift are plausible contributors to the generalization gap, but the present experiments do not isolate their individual effects.
-\end{enumerate}
-
-\subsection{Failure Mode Analysis}
-
-\begin{itemize}[leftmargin=*]
-    \item \textbf{JailbreakHub (F1 = 0.22):} The model's predictions are mostly wrong for this dataset. The attack patterns in JailbreakHub appear to be fundamentally different from the training data.
-
-    \item \textbf{Jailbreak Complete DS (Acc = 0.42):} The 42.2\% accuracy indicates substantial failure on this benchmark and suggests that patterns learned from the training distribution do not transfer reliably to this dataset.
-
-    \item \textbf{Misspelling (63.5\%):} The 29\% drop from original detection suggests that character-exact matching (TF-IDF, regex) is a primary detection mechanism, rather than semantic understanding.
-\end{itemize}
-
-\subsection{Implications}
-
-The hybrid guardrail demonstrates that purpose-built statistical features can achieve substantial in-distribution performance at low computational cost. However, the severe cross-dataset generalization gap reveals a potential limitation: statistical pattern matching may not generalize across distributions the way semantic understanding might.
-
-For production deployment, the model requires:
-\begin{itemize}[leftmargin=*]
-    \item Multi-source training data to improve generalization
-    \item Character-level normalization to address misspelling vulnerability
-    \item Cost-sensitive training or threshold adjustment to reduce false positives
-    \item Continuous monitoring for distribution drift
-\end{itemize}
-
-%===========================================================================
-\section{Limitations}\label{sec:limitations}
-%===========================================================================
-
-\begin{enumerate}[leftmargin=*]
-    \item \textbf{Cross-Dataset Generalization:} The hybrid guardrail drops from 83.0\% to 51.4\% accuracy on external datasets ($-$31.6 pp), indicating weak out-of-distribution generalization. This is the most significant limitation.
-
-    \item \textbf{Misspelling Vulnerability:} Transformation-based testing reveals 63.5\% detection against leetspeak misspelling, the only transformation triggering a WARN status. Character substitution destroys word-level TF-IDF features.
-
-    \item \textbf{High False Positive Rate:} 7,244 safe prompts are misclassified as malicious (25.0\% of safe class). In production, this means approximately 1 in 4 legitimate user queries would be blocked.
-
-    \item \textbf{Dataset and Distribution Shift:} In-distribution evaluation uses the Guardrailer Dataset~v1 (722,842 samples, 59.9\% malicious / 40.1\% benign). Dataset composition and distribution shift are plausible contributors to the generalization gap, but the present experiments do not isolate their individual effects from other factors such as vocabulary mismatch, annotation differences, or feature engineering overfitting.
-
-    \item \textbf{Limited Cross-Dataset Testing:} Only 4 external datasets were evaluated. More diverse benchmarks would provide a more complete picture of generalization.
-
-    \item \textbf{Feature Engineering Limitations:} The 117 handcrafted features are specific to the training data distribution. Novel attack patterns not captured by these features may evade detection.
-
-    \item \textbf{Limited Robustness Evaluation:} The model was tested against 8 fixed transformations ($n=200$) but not against adaptive adversarial attacks that iteratively optimize to evade detection. Robustness claims are restricted to the evaluated transformations.
-
-    \item \textbf{Single Distribution Training:} The model is trained on a single dataset, which may not represent the full spectrum of real-world prompt injection attacks.
-\end{enumerate}
+Production deployment requires: (1)~multi-source training data for generalization; (2)~character-level normalization for misspelling robustness; (3)~cost-sensitive training to reduce FPR; and (4)~continuous monitoring for distribution drift.
 
 %===========================================================================
 \section{Future Work}\label{sec:future}
 %===========================================================================
 
-\begin{enumerate}[leftmargin=*]
-    \item \textbf{Multi-Source Training:} Combine Guardrailer Dataset~v1 with JailbreakBench, JailbreakHub, and other datasets to improve cross-dataset generalization.
-
-    \item \textbf{Character-Level Normalization:} Add preprocessing steps (leetspeak normalization, Unicode NFKD decomposition) to address the misspelling vulnerability.
-
-    \item \textbf{Adversarial Training:} Train on adversarial examples (misspellings, Unicode homoglyphs, encoding) to improve robustness against character-level obfuscation and adaptive attacks.
-
-    \item \textbf{Semantic Features:} Add sentence transformer embeddings as features to capture meaning-based distinctions that statistical features miss.
-
-    \item \textbf{Cost-Sensitive Training:} Assign higher misclassification cost to false positives to reduce the 25.0\% FP rate.
-
-    \item \textbf{Hierarchical Classification:} Two-stage approach: high-recall filter followed by high-precision classifier on filtered results.
-
-    \item \textbf{Domain Adaptation:} Train a domain classifier to distinguish datasets, using gradient reversal to learn domain-invariant features.
-
-    \item \textbf{Feature Ablation Studies:} Systematic evaluation of individual feature contributions to identify redundant or harmful features. Our initial ablation (Section~\ref{sec:ablation}) suggests handcrafted features are noise; future work should evaluate TF-IDF-only models on external benchmarks to test whether simplification improves cross-dataset generalization.
-\end{enumerate}
+Key directions include: (1)~multi-source training combining Guardrailer Dataset~v1 with JailbreakBench, JailbreakHub, and other datasets; (2)~character-level normalization via leetspeak-aware tokenization and Unicode NFKD decomposition; (3)~semantic features using sentence transformer embeddings as additional inputs; (4)~cost-sensitive thresholding to reduce the 25.0\% false-positive rate; and (5)~domain adaptation using gradient reversal to learn domain-invariant features.
 
 %===========================================================================
 \section{Conclusion}\label{sec:conclusion}
 %===========================================================================
 
-This paper documents a systematic journey in prompt injection detection, from embedding failure through investigation to a hybrid guardrail. Phase~6 revealed that nearest-centroid scoring fails to achieve practical performance (AUC 0.547), suggesting that the evaluated general-purpose embedding models did not reliably expose security-relevant distinctions through the tested nearest-centroid scoring approach. Systematic investigation across four embedding models indicates that the failure is methodological, not architectural: linear probes on the same embeddings achieve AUC 0.844--0.884, and the critical factor is the number of centroids (4 fails, 2 works).
-
-Motivated by these findings, we developed a lightweight hybrid guardrail combining 117 handcrafted features, TF-IDF similarity, and a stacking ensemble. The hybrid model achieves 83.0\% in-distribution accuracy with a measured single-threaded CPU inference latency of 0.149\,ms per prompt. An ablation study revealed a surprising finding: TF-IDF alone achieves 85.0\% accuracy, exceeding the full hybrid by 2.0 percentage points, indicating that, under the evaluated setting, the 117 handcrafted features do not provide complementary predictive value beyond TF-IDF. Cross-dataset evaluation on four external benchmarks reveals a severe generalization gap: performance drops to 51.4\% (a 31.6 percentage-point decline), suggesting that the model may have learned dataset-specific characteristics rather than fully generalizable attack patterns.
-
-The hybrid guardrail's strengths (fast inference, strong AUC, lightweight deployment) and weaknesses (cross-dataset failure, misspelling vulnerability, high false positive rate) provide experimentally grounded guidance for designing prompt injection detection systems. The most critical open challenge remains out-of-distribution generalization: production deployment may require multi-source training data and evaluation protocols that test robustness under distribution shift.
+This paper documents a systematic journey in prompt injection detection. The embedding method revealed that nearest-centroid scoring fails to achieve practical performance (AUC 0.547), suggesting that the evaluated general-purpose embedding models did not reliably expose security-relevant distinctions through the tested nearest-centroid scoring approach. Systematic investigation across embedding models shows the failure is primarily methodological: linear probes on the same embeddings achieve AUC 0.844--0.855, and reducing from 4 to 2 centroids substantially improves performance. We evaluated a lightweight hybrid guardrail (117 handcrafted features + TF-IDF + stacking ensemble) achieving 83.0\% in-distribution accuracy at 0.149\,ms/prompt. An ablation study revealed TF-IDF alone achieves 85.0\%, exceeding the full hybrid by 2.0 pp, indicating handcrafted features do not provide complementary value under the evaluated setting. Cross-dataset evaluation reveals a severe generalization gap (31.5 pp decline to 51.5\%). The most critical open challenge remains out-of-distribution generalization, requiring multi-source training data and evaluation protocols that test robustness under distribution shift.
 
 %===========================================================================
 \section*{Data and Code Availability}
@@ -971,8 +627,8 @@ The hybrid guardrail's strengths (fast inference, strong AUC, lightweight deploy
 
 The complete source code, trained models, and experimental artifacts are publicly available at:
 \begin{itemize}[leftmargin=*]
-    \item \textbf{GitHub Repository:} \url{https://github.com/dev-prashanna/Guardrailer}
-    \item \textbf{Kaggle Dataset:} \url{https://www.kaggle.com/datasets/prashannadeveloper/guardrailer-dataset-v1}
+    \item \textbf{GitHub:} \url{https://github.com/dev-prashanna/Prompt\_Injection\_Detection}
+    \item \textbf{Kaggle:} \url{https://www.kaggle.com/datasets/prashannadeveloper/guardrailer-dataset-v1}
 \end{itemize}
 
 %===========================================================================
