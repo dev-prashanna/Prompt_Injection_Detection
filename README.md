@@ -2,6 +2,9 @@
 
 > **Origin:** This project extends the research started in [Guardrailer](https://github.com/dev-prashanna/Guardrailer), tracing the empirical journey from embedding-based scoring to lightweight statistical models for prompt injection detection.
 
+The paper is available at:
+https://zenodo.org/records/22124698?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6IjBiYjdkYzIzLTVkNjYtNGNiNC04NDIzLWMxNTY3OGE2ZmRhMiIsImRhdGEiOnt9LCJyYW5kb20iOiJjZDljOTM1ZmMzMTVkZWNmMDIzZDc3OWVjNDQ3ZmQ0NyJ9.4qip7fOYsOyWOfZC_r-UIurLFKmpcYofcS04YnCkVjXGQl9vUv3SXilttXBo9XCPK2yac9BL1Z62qr8SotG6aQ
+
 A research project investigating prompt injection detection using embedding-based scoring and lightweight statistical features. Published as a LaTeX paper with full experimental code.
 
 ## Overview
