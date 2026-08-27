@@ -4,7 +4,7 @@
 
 <h1 align="center">Prompt Injection Detection</h1>
 
-<p align="center"><b>RESEARCHED UNDER AURA LABS (AI and Unified Research ALiance)</b></p>
+<p align="center"><b>RESEARCHED UNDER Co-Founded Club AURA LABS (AI and Unified Research Alliance)</b></p>
 
 > **Origin:** This project extends the research started in [Guardrailer](https://github.com/dev-prashanna/Guardrailer), tracing the empirical journey from embedding-based scoring to lightweight statistical models for prompt injection detection.
 
